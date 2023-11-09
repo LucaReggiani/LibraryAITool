@@ -1,13 +1,17 @@
 import pandas as pd
 from config import configuration
 from routes import setup_routes
-from flask import current_app
+from models import BookModel
 
 if __name__ == '__main__':
 
     app = configuration.get_app()
     api = configuration.get_api()
     db = configuration.get_db()
+
+    # Setup the routes
+    setup_routes(api)
+
     # getting alembic for continuous db integration
     alembic = configuration.get_alembic()
 
@@ -21,7 +25,5 @@ if __name__ == '__main__':
 
         # run all available upgrades
         alembic.upgrade()
-
-    # Setup the routes
-    setup_routes(api)
+        
     app.run(debug=True)
