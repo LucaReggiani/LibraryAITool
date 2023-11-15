@@ -3,6 +3,7 @@ from flask_restful import Api
 from sqlalchemy.orm import declarative_base
 from flask_sqlalchemy import SQLAlchemy
 from flask_alembic import Alembic
+from flask_cors import CORS
 
 class Configurations():
 
@@ -10,6 +11,8 @@ class Configurations():
 
         # create the app
         self._app = Flask(__name__)
+
+        CORS(self._app)
 
         # add API extension
         self._api = Api(self._app)

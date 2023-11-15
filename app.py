@@ -1,7 +1,8 @@
-import pandas as pd
 from config import configuration
 from routes import setup_routes
-from models import BookModel
+
+import os
+from dotenv import load_dotenv
 
 if __name__ == '__main__':
 
