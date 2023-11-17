@@ -1,6 +1,10 @@
-from sqlalchemy import Integer, String, Float, Boolean
+from sqlalchemy import Column, Integer, String, Float, Boolean
 from sqlalchemy.orm import Mapped, mapped_column
 from config import configuration
+from sqlalchemy import ForeignKey
+from typing import List
+from sqlalchemy import Index
+from sqlalchemy.orm import relationship
 
 db = configuration.get_db()
 
@@ -23,6 +27,11 @@ class BookModel(db.Model):
     publishDate: Mapped[str] = mapped_column(String(715), nullable=True)
     coverImg: Mapped[str] = mapped_column(String(715), nullable=True)
     price: Mapped[float] = mapped_column(Float, nullable=False)
+    # Add an index on the bookId column
+    __table_args__ = (Index('idx_bookId', 'bookId'),)
+    books: Mapped[List["ReviewModel"]] = relationship(
+         back_populates="book", cascade="all, delete-orphan"
+    )
 
 
 class UserModel(db.Model):
@@ -34,3 +43,24 @@ class UserModel(db.Model):
     email: Mapped[str] = mapped_column(String(55), unique=True, nullable=False)
     password: Mapped[str] = mapped_column(String(500), nullable=False)
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    # Add an index on the userId column
+    __table_args__ = (Index('idx_userId', 'userId'),)
+
+    reviews: Mapped[List["ReviewModel"]] = relationship(
+         back_populates="user", cascade="all, delete-orphan"
+    )
+
+
+class ReviewModel(db.Model):
+    __tablename__ = 'Review'
+
+    reviewId: Mapped[str] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    rating: Mapped[float] = mapped_column(Float, nullable=False)
+    review_description: Mapped[str] = mapped_column(String(1000))
+    bookId: Mapped[str] = mapped_column(ForeignKey("Book.bookId"))
+    userId: Mapped[str] = mapped_column(ForeignKey("User.userId"))
+
+    book: Mapped["BookModel"] = relationship(back_populates="books")
+    user: Mapped["UserModel"] = relationship(back_populates="reviews")
+

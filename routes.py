@@ -1,4 +1,4 @@
-from resources import BookList, Book, TranslationResource, FastTranslationResource, OrderBooksResource, BookFilteredList, UserRegistrationResource, UserLoginResource
+from resources import BookList, Book, TranslationResource, FastTranslationResource, OrderBooksResource, BookFilteredList, UserRegistrationResource, UserLoginResource, BookReviews
 
 # Define routes
 def setup_routes(api):
@@ -6,6 +6,7 @@ def setup_routes(api):
     api.add_resource(OrderBooksResource, '/book_list/ordering')
     api.add_resource(Book, '/book_list/<book_id>')
     api.add_resource(BookFilteredList, '/filter_books')
+    api.add_resource(BookReviews, '/reviews/<book_id>')
     api.add_resource(TranslationResource, '/translate')
     api.add_resource(FastTranslationResource, '/fast_translate')
     api.add_resource(UserRegistrationResource, '/signup')

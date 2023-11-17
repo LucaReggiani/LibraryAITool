@@ -1,6 +1,6 @@
 from flask_restful import reqparse, abort, Resource
 from config import configuration
-from models import BookModel, UserModel
+from models import BookModel, ReviewModel, UserModel
 from flask import request
 import json
 from sqlalchemy import desc, func
@@ -385,3 +385,79 @@ class UserLoginResource(Resource):
             return {'message': 'Login successful', 'user': user_details}, 200
         else:
             return {'message': 'Invalid credentials'}, 401
+        
+
+# ReviewList
+class BookReviews(Resource):
+    def get(self, book_id):
+        # retrieving all the reviews of the current book, and relate author.
+        reviews = (
+            db.session.query(ReviewModel)
+            .filter(ReviewModel.bookId == book_id)
+            .join(UserModel, ReviewModel.userId == UserModel.userId)
+            .all()
+        )
+        
+        # Creating a list of dictionaries for each review
+        reviews_data = []
+        for review in reviews:
+            review_data = {
+                'reviewId': review.reviewId,
+                'rating': review.rating,
+                'review_description': review.review_description,
+                'user_name': review.user.name,
+                'user_lastname': review.user.lastname
+            }
+            reviews_data.append(review_data)
+
+        return reviews_data
+
+
+    def post(self, book_id):
+
+        raw_data = request.get_data()
+        data = json.loads(raw_data)
+        bookId = book_id
+        userId = data['userId']
+
+        form_data = data['form_data']
+        rating = form_data.get('rating', '')[0]
+        review_description = form_data.get('review', '')[0]
+
+        # Create a new Book instance and add it to the database
+        new_review = ReviewModel(rating=rating, review_description=review_description, bookId=bookId, userId=userId)
+        db.session.add(new_review)
+        db.session.commit()
+        
+        # recomputing average rating for the given book
+
+        # sum of all the ratings
+        sum_of_ratings = (
+            db.session.query(func.sum(ReviewModel.rating))
+            .filter(ReviewModel.bookId == book_id)
+            .scalar() or 0
+        )
+
+        # counting all the reviews
+        count_of_reviews = (
+            db.session.query(func.count(ReviewModel.reviewId))
+            .filter(ReviewModel.bookId == book_id)
+            .scalar() or 0
+        )
+
+        average_rating = sum_of_ratings / count_of_reviews
+
+        # Get the book instance
+        book = db.session.query(BookModel).filter_by(bookId=book_id).first()
+
+        # Check if the book exists
+        if book:
+            # Update the rating
+            book.rating = average_rating
+
+        # Commit the changes to the database
+        db.session.commit()
+
+        return "success!", 201
+        
+
