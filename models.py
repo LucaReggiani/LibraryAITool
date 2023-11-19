@@ -1,10 +1,12 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean
+from sqlalchemy import Column, Integer, String, Float, Boolean, Table
 from sqlalchemy.orm import Mapped, mapped_column
 from config import configuration
 from sqlalchemy import ForeignKey
 from typing import List
 from sqlalchemy import Index
 from sqlalchemy.orm import relationship
+from sqlalchemy.ext.declarative import declarative_base
+
 
 db = configuration.get_db()
 
@@ -32,6 +34,7 @@ class BookModel(db.Model):
     books: Mapped[List["ReviewModel"]] = relationship(
          back_populates="book", cascade="all, delete-orphan"
     )
+
 
 
 class UserModel(db.Model):
@@ -64,3 +67,13 @@ class ReviewModel(db.Model):
     book: Mapped["BookModel"] = relationship(back_populates="books")
     user: Mapped["UserModel"] = relationship(back_populates="reviews")
 
+
+class CartModel(db.Model):
+    __tablename__ = 'Cart'
+
+    cartId: Mapped[str] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    userId: Mapped[str] = mapped_column(ForeignKey("User.userId"))
+    user: Mapped["UserModel"] = relationship(back_populates="reviews")
+
+    # Many-to-many relationship with BookModel
+    books = relationship('BookModel', cascade="all, delete-orphan")

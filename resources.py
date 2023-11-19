@@ -14,11 +14,17 @@ import sys
 from flask import make_response
 from sqlalchemy import or_
 from werkzeug.security import generate_password_hash, check_password_hash
+from embeddings import *
 
 load_dotenv()
 api_key=os.getenv("OPENAI_KEY",None)
 
 client = AsyncOpenAI(
+    # defaults to os.environ.get("OPENAI_API_KEY")
+    api_key=api_key,
+)
+
+clientSync = OpenAI(
     # defaults to os.environ.get("OPENAI_API_KEY")
     api_key=api_key,
 )
@@ -31,10 +37,11 @@ class Book(Resource):
     def get(self, book_id):
         
         # Retrieve information about a specific book
-            book = db.session.query(BookModel).filter_by(bookId=book_id).first()
+            query = db.session.query(BookModel).filter_by(bookId=book_id)
+            book = query.first()
 
             if book:
-                book_dictionary = {
+                main_book_dictionary = {
                     'bookId': book.bookId,
                     'title': book.title,
                     'series': book.series,
@@ -53,7 +60,43 @@ class Book(Resource):
                     'price': book.price,
                 }
 
-                return book_dictionary
+                # adding the main book to a list
+                books = [main_book_dictionary]
+
+                # find suggested books using openai embeddings
+                books_query = db.session.query(BookModel.bookId, BookModel.description).all()
+
+                # Extracting bookId and description values into a list of tuple
+                book_ids_description = [(book_id, description) for book_id, description in books_query]
+
+                # suggested books
+                suggested_book_ids = recommendations_from_descriptions(clientSync, main_book_dictionary, book_ids_description)
+
+                for recommended_book_id in suggested_book_ids:
+                    recommended_book = db.session.query(BookModel).filter_by(bookId=recommended_book_id).first()
+
+                    if recommended_book:
+                        suggested_book_dictionary = {
+                            'bookId': recommended_book.bookId,
+                            'title': recommended_book.title,
+                            'series': recommended_book.series,
+                            'author': recommended_book.author,
+                            'rating': recommended_book.rating,
+                            'description': recommended_book.description,
+                            'language_1': recommended_book.language_1,
+                            'language_2': recommended_book.language_2,
+                            'language_3': recommended_book.language_3,
+                            'language_4': recommended_book.language_4,
+                            'language_5': recommended_book.language_5,
+                            'pages': recommended_book.pages,
+                            'publisher': recommended_book.publisher,
+                            'publishDate': recommended_book.publishDate,
+                            'coverImg': recommended_book.coverImg,
+                            'price': recommended_book.price,
+                        }
+                        books.append(suggested_book_dictionary)
+
+                return books
             else:
                 return {'error': 'Book not found'}, 404
 
