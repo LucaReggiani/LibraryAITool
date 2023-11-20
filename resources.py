@@ -1,6 +1,6 @@
 from flask_restful import reqparse, abort, Resource
 from config import configuration
-from models import BookModel, ReviewModel, UserModel
+from models import BookModel, ReviewModel, UserModel, CartItemsModel
 from flask import request
 import json
 from sqlalchemy import desc, func
@@ -71,32 +71,33 @@ class Book(Resource):
 
                 # suggested books
                 suggested_book_ids = recommendations_from_descriptions(clientSync, main_book_dictionary, book_ids_description)
+                if suggested_book_ids:
+                    for recommended_book_id in suggested_book_ids:
+                        recommended_book = db.session.query(BookModel).filter_by(bookId=recommended_book_id).first()
 
-                for recommended_book_id in suggested_book_ids:
-                    recommended_book = db.session.query(BookModel).filter_by(bookId=recommended_book_id).first()
-
-                    if recommended_book:
-                        suggested_book_dictionary = {
-                            'bookId': recommended_book.bookId,
-                            'title': recommended_book.title,
-                            'series': recommended_book.series,
-                            'author': recommended_book.author,
-                            'rating': recommended_book.rating,
-                            'description': recommended_book.description,
-                            'language_1': recommended_book.language_1,
-                            'language_2': recommended_book.language_2,
-                            'language_3': recommended_book.language_3,
-                            'language_4': recommended_book.language_4,
-                            'language_5': recommended_book.language_5,
-                            'pages': recommended_book.pages,
-                            'publisher': recommended_book.publisher,
-                            'publishDate': recommended_book.publishDate,
-                            'coverImg': recommended_book.coverImg,
-                            'price': recommended_book.price,
-                        }
-                        books.append(suggested_book_dictionary)
-
+                        if recommended_book:
+                            suggested_book_dictionary = {
+                                'bookId': recommended_book.bookId,
+                                'title': recommended_book.title,
+                                'series': recommended_book.series,
+                                'author': recommended_book.author,
+                                'rating': recommended_book.rating,
+                                'description': recommended_book.description,
+                                'language_1': recommended_book.language_1,
+                                'language_2': recommended_book.language_2,
+                                'language_3': recommended_book.language_3,
+                                'language_4': recommended_book.language_4,
+                                'language_5': recommended_book.language_5,
+                                'pages': recommended_book.pages,
+                                'publisher': recommended_book.publisher,
+                                'publishDate': recommended_book.publishDate,
+                                'coverImg': recommended_book.coverImg,
+                                'price': recommended_book.price,
+                            }
+                            books.append(suggested_book_dictionary)
+                # books will be 1-element list if no description here is provided. 6 otherwise
                 return books
+
             else:
                 return {'error': 'Book not found'}, 404
 
@@ -467,7 +468,7 @@ class BookReviews(Resource):
         rating = form_data.get('rating', '')[0]
         review_description = form_data.get('review', '')[0]
 
-        # Create a new Book instance and add it to the database
+        # Create a new review instance and add it to the database
         new_review = ReviewModel(rating=rating, review_description=review_description, bookId=bookId, userId=userId)
         db.session.add(new_review)
         db.session.commit()
@@ -502,5 +503,74 @@ class BookReviews(Resource):
         db.session.commit()
 
         return "success!", 201
-        
+    
 
+# ReviewList
+class AddToCart(Resource):
+
+    def get(self):
+
+        raw_data = request.get_data()
+        data = json.loads(raw_data)
+        userId = data['userId']
+        
+        # retrieving all the books in the current user's cart
+        cart_books = (
+            db.session.query(CartItemsModel)
+            .filter(CartItemsModel.userId == userId)
+            .join(BookModel, CartItemsModel.bookId == BookModel.bookId)
+            .all()
+        )
+        
+        # Creating a list of dictionaries for each review
+        cart_data = []
+        for cart_book in cart_books:
+            single_cart_data = {
+                'cartId': cart_book.cartId,
+                'userId': cart_book.userId,
+                'bookId': cart_book.bookId,
+                'quantity': cart_book.quantity,
+                'total_price': cart_book.total_price,
+                'title': cart_book.book.title,
+                'author': cart_book.book.author,
+                'rating': cart_book.book.rating,
+                'price': cart_book.book.price,
+                'coverImg': cart_book.book.coverImg,
+
+            }
+            cart_data.append(single_cart_data)
+
+        return cart_data
+
+
+    def post(self):
+
+        raw_data = request.get_data()
+        data = json.loads(raw_data)
+        bookId = data['bookId']
+        userId = data['userId']
+
+        # checking if the current user already inserted the current book into the Cart
+        result = db.session.query(CartItemsModel).filter(CartItemsModel.userId==userId, CartItemsModel.bookId==bookId).first()
+        book_price = db.session.query(BookModel.price).filter(BookModel.bookId==bookId).first()[0]
+        if result:
+            result.quantity += 1
+            result.total_price += book_price
+        else:
+            # Create a new Cart instance and add it to the database
+            new_cart_item = CartItemsModel(quantity=1, total_price=book_price, bookId=bookId, userId=userId)
+            db.session.add(new_cart_item)
+
+        # Commit the changes to the database
+        db.session.commit()
+
+        return "success!", 201
+    
+
+    def options(self):
+        # Handle the preflight OPTIONS request
+        response = make_response()
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        response.headers.add('Access-Control-Allow-Methods', 'POST')
+        return response

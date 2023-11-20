@@ -1,4 +1,13 @@
-from resources import BookList, Book, TranslationResource, FastTranslationResource, OrderBooksResource, BookFilteredList, UserRegistrationResource, UserLoginResource, BookReviews
+from resources import (BookList, 
+                       Book, 
+                       TranslationResource, 
+                       FastTranslationResource, 
+                       OrderBooksResource, 
+                       BookFilteredList, 
+                       UserRegistrationResource, 
+                       UserLoginResource, 
+                       BookReviews, 
+                       AddToCart)
 
 # Define routes
 def setup_routes(api):
@@ -11,3 +20,4 @@ def setup_routes(api):
     api.add_resource(FastTranslationResource, '/fast_translate')
     api.add_resource(UserRegistrationResource, '/signup')
     api.add_resource(UserLoginResource, '/login')
+    api.add_resource(AddToCart, '/cart')

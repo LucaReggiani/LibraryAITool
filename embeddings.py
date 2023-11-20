@@ -88,7 +88,10 @@ def recommendations_from_descriptions(
     # get the embedding of the source string
     query_id = book_dictionary['bookId']
     query_model = model
-    query_embedding = embeddings[(query_id, query_model)]
+    try:
+        query_embedding = embeddings[(query_id, query_model)]
+    except:
+        return None
 
     # get distances between the source embedding and other embeddings (function from embeddings_utils.py)
     distances = distances_from_embeddings(query_embedding, embeddings.values(), distance_metric="cosine")

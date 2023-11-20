@@ -1,9 +1,6 @@
 from config import configuration
 from routes import setup_routes
 
-import os
-from dotenv import load_dotenv
-
 if __name__ == '__main__':
 
     app = configuration.get_app()

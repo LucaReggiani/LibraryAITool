@@ -31,7 +31,10 @@ class BookModel(db.Model):
     price: Mapped[float] = mapped_column(Float, nullable=False)
     # Add an index on the bookId column
     __table_args__ = (Index('idx_bookId', 'bookId'),)
-    books: Mapped[List["ReviewModel"]] = relationship(
+    reviews: Mapped[List["ReviewModel"]] = relationship(
+         back_populates="book", cascade="all, delete-orphan"
+    )
+    cart: Mapped["CartItemsModel"]= relationship(
          back_populates="book", cascade="all, delete-orphan"
     )
 
@@ -54,6 +57,10 @@ class UserModel(db.Model):
          back_populates="user", cascade="all, delete-orphan"
     )
 
+    cart: Mapped["CartItemsModel"] = relationship(
+         back_populates="user", cascade="all, delete-orphan"
+    )
+
 
 class ReviewModel(db.Model):
     __tablename__ = 'Review'
@@ -64,16 +71,18 @@ class ReviewModel(db.Model):
     bookId: Mapped[str] = mapped_column(ForeignKey("Book.bookId"))
     userId: Mapped[str] = mapped_column(ForeignKey("User.userId"))
 
-    book: Mapped["BookModel"] = relationship(back_populates="books")
+    book: Mapped["BookModel"] = relationship(back_populates="reviews")
     user: Mapped["UserModel"] = relationship(back_populates="reviews")
 
 
-class CartModel(db.Model):
+class CartItemsModel(db.Model):
     __tablename__ = 'Cart'
 
     cartId: Mapped[str] = mapped_column(Integer, primary_key=True, autoincrement=True)
     userId: Mapped[str] = mapped_column(ForeignKey("User.userId"))
-    user: Mapped["UserModel"] = relationship(back_populates="reviews")
+    bookId: Mapped[str] = mapped_column(ForeignKey("Book.bookId"))
+    quantity: Mapped[int] = mapped_column(Integer, nullable=True)
+    total_price: Mapped[float] = mapped_column(Float, nullable=False)
 
-    # Many-to-many relationship with BookModel
-    books = relationship('BookModel', cascade="all, delete-orphan")
+    user: Mapped["UserModel"] = relationship(back_populates="cart")
+    book: Mapped["BookModel"] = relationship(back_populates="cart")
